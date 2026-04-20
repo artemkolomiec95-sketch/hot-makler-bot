@@ -1,6 +1,8 @@
 import asyncio
 import logging
 import os
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -22,16 +24,32 @@ logger = logging.getLogger(__name__)
 os.makedirs("data", exist_ok=True)
 
 
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"OK")
+
+    def log_message(self, *args):
+        pass
+
+
+def run_health_server():
+    port = int(os.environ.get("PORT", 8080))
+    server = HTTPServer(("0.0.0.0", port), HealthHandler)
+    logger.info(f"Health server on port {port}")
+    server.serve_forever()
+
+
 async def sync_sheets():
-    logger.info("Синхронизация Google Sheets...")
+    logger.info("Syncing Google Sheets...")
     props = await asyncio.get_event_loop().run_in_executor(None, fetch_properties)
     update_cache(props)
-    # Сохраняем в SQLite
     from src.storage.db import SessionLocal
     from src.storage.repositories import PropertyRepo
     async with SessionLocal() as session:
         await PropertyRepo(session).save_all(props)
-    logger.info(f"Синхронизировано {len(props)} объектов")
+    logger.info(f"Synced {len(props)} properties")
 
 
 async def main():
@@ -40,7 +58,7 @@ async def main():
         sentry_sdk.init(dsn=settings.sentry_dsn)
 
     await init_db()
-    await sync_sheets()  # первичная загрузка
+    await sync_sheets()
 
     bot = Bot(
         token=settings.bot_token,
@@ -56,9 +74,12 @@ async def main():
     setup_scheduler(sync_sheets)
     scheduler.start()
 
-    logger.info("Бот запущен @hot_makler_fukuok_bot")
+    logger.info("Bot started @hot_makler_fukuok_bot")
     await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
 
 
 if __name__ == "__main__":
+    # Запускаем health-сервер в отдельном потоке
+    t = threading.Thread(target=run_health_server, daemon=True)
+    t.start()
     asyncio.run(main())
