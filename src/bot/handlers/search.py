@@ -54,7 +54,7 @@ async def cb_check_out(callback: CallbackQuery, callback_data: SimpleCalendarCal
 
 
 # ---------- guests ----------
-@router.callback_query(F.data.startswith("guests:"), SearchFSM.guests)
+@router.callback_query(F.data.startswith("guests:"))
 async def cb_guests(callback: CallbackQuery, state: FSMContext):
     guests = int(callback.data.split(":")[1])
     await state.update_data(guests=guests)
@@ -75,7 +75,7 @@ async def cb_guests(callback: CallbackQuery, state: FSMContext):
 
 
 # ---------- districts ----------
-@router.callback_query(F.data.startswith("district:"), SearchFSM.districts)
+@router.callback_query(F.data.startswith("district:"))
 async def cb_districts(callback: CallbackQuery, state: FSMContext):
     val = callback.data.split(":", 1)[1]
     data = await state.get_data()
@@ -108,7 +108,7 @@ async def cb_districts(callback: CallbackQuery, state: FSMContext):
 
 
 # ---------- rooms ----------
-@router.callback_query(F.data.startswith("rooms:"), SearchFSM.rooms)
+@router.callback_query(F.data.startswith("rooms:"))
 async def cb_rooms(callback: CallbackQuery, state: FSMContext):
     val = callback.data.split(":")[1]
     rooms = None if val == "any" else int(val)
@@ -119,7 +119,7 @@ async def cb_rooms(callback: CallbackQuery, state: FSMContext):
 
 
 # ---------- bathrooms ----------
-@router.callback_query(F.data.startswith("bathrooms:"), SearchFSM.bathrooms)
+@router.callback_query(F.data.in_({"bathrooms:1", "bathrooms:2", "bathrooms:any"}))
 async def cb_bathrooms(callback: CallbackQuery, state: FSMContext):
     val = callback.data.split(":")[1]
     bathrooms = None if val == "any" else int(val)
@@ -133,7 +133,7 @@ async def cb_bathrooms(callback: CallbackQuery, state: FSMContext):
 
 
 # ---------- kitchen ----------
-@router.callback_query(F.data.startswith("kitchen:"), SearchFSM.kitchen)
+@router.callback_query(F.data.startswith("kitchen:"))
 async def cb_kitchen(callback: CallbackQuery, state: FSMContext):
     val = callback.data.split(":")[1]
     need_kitchen = True if val == "yes" else None
@@ -147,7 +147,7 @@ async def cb_kitchen(callback: CallbackQuery, state: FSMContext):
 
 
 # ---------- ac ----------
-@router.callback_query(F.data.startswith("ac:"), SearchFSM.ac)
+@router.callback_query(F.data.startswith("ac:"))
 async def cb_ac(callback: CallbackQuery, state: FSMContext):
     val = callback.data.split(":")[1]
     need_ac = True if val == "yes" else None
@@ -161,7 +161,7 @@ async def cb_ac(callback: CallbackQuery, state: FSMContext):
 
 
 # ---------- budget: skip ----------
-@router.callback_query(F.data == "budget:skip", SearchFSM.budget)
+@router.callback_query(F.data == "budget:skip")
 async def cb_budget_skip(callback: CallbackQuery, state: FSMContext):
     await state.update_data(budget_min=None, budget_max=None)
     await callback.answer()
@@ -169,7 +169,7 @@ async def cb_budget_skip(callback: CallbackQuery, state: FSMContext):
 
 
 # ---------- budget: text input ----------
-@router.message(SearchFSM.budget)
+@router.message(SearchFSM.budget)  # оставляем — текстовый ввод только в этом состоянии
 async def msg_budget(message: Message, state: FSMContext):
     parts = message.text.strip().split()
     if len(parts) == 2:
